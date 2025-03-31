@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
+const fetch = require('node-fetch'); // Добавьте для Telegram
 
 const app = express();
 const pool = new Pool({
@@ -21,6 +22,32 @@ if (!fs.existsSync('uploads')) {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+
+// Временный маршрут для проверки и создания таблицы orders
+app.get('/api/check-orders-table', async (req, res) => {
+  try {
+    const check = await pool.query(
+      "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'orders')"
+    );
+    if (!check.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE orders (
+          id SERIAL PRIMARY KEY,
+          customer_name VARCHAR(255) NOT NULL,
+          phone VARCHAR(20) NOT NULL,
+          items JSONB NOT NULL,
+          desired_datetime TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      console.log('Created orders table');
+    }
+    res.json({ status: 'Orders table OK', exists: check.rows[0].exists });
+  } catch (err) {
+    console.error('Check orders table error:', err.stack);
+    res.status(500).json({ error: 'Failed to check/create orders table', details: err.message });
+  }
+});
 
 app.get('/api/products', async (req, res) => {
   try {
@@ -50,7 +77,6 @@ app.post('/api/products', upload.single('photo'), async (req, res) => {
   }
 });
 
-// Новый маршрут для редактирования товара
 app.put('/api/products/:id', upload.single('photo'), async (req, res) => {
   const { id } = req.params;
   const { name, description, price, quantity, category } = req.body;
@@ -99,11 +125,27 @@ app.delete('/api/cart/:id', (req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   const { customer_name, phone, items, desired_datetime } = req.body;
+  console.log('Order data:', { customer_name, phone, items, desired_datetime });
+
   try {
     const result = await pool.query(
       'INSERT INTO orders (customer_name, phone, items, desired_datetime) VALUES ($1, $2, $3, $4) RETURNING *',
       [customer_name, phone, JSON.stringify(items), desired_datetime]
     );
+
+    // Отправка в Telegram
+    const telegramToken = '7905338411:AAFI1v_5NXSS-qCOwbiei4tKs28_pLHt0pc'; // Замените на токен вашего бота
+    const chatId = '709914926'; // Замените на ваш chat_id
+    const message = `Новый заказ:\nИмя: ${customer_name}\nТелефон: ${phone}\nТовары: ${JSON.stringify(items, null, 2)}\nДата: ${desired_datetime}`;
+    await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+      }),
+    });
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error('POST /api/orders error:', err.stack);
