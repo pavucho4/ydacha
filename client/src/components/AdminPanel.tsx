@@ -71,15 +71,20 @@ const AdminPanel: React.FC = () => {
       formData.append('photo', newProduct.photo);
     }
 
+    console.log('Sending FormData:', Object.fromEntries(formData)); // Отладка
+
     axios.post('/api/products', formData, {
       auth: { username: 'admin', password: 'admin123' },
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-      .then(() => {
+      .then(response => {
+        console.log('Товар добавлен:', response.data);
         setNewProduct({ name: '', description: '', price: '', quantity: '', category: '', photo: null });
         fetchProducts();
       })
-      .catch(error => console.error('Ошибка добавления товара:', error));
+      .catch(error => {
+        console.error('Ошибка добавления товара:', error.response?.data || error.message);
+      });
   };
 
   const handleEditProduct = (product: Product) => {
@@ -91,7 +96,7 @@ const AdminPanel: React.FC = () => {
     if (!editingProduct) return;
 
     const formData = new FormData();
-    formData.append('id', editingProduct.id.toString()); // Добавляем ID для идентификации
+    formData.append('id', editingProduct.id.toString());
     formData.append('name', editingProduct.name);
     formData.append('description', editingProduct.description);
     formData.append('price', editingProduct.price.toString());
@@ -101,8 +106,9 @@ const AdminPanel: React.FC = () => {
       formData.append('photo', newProduct.photo);
     }
 
-    // Примечание: Если сервер поддерживает PUT, замените на axios.put
-    axios.post(`/api/products`, formData, {
+    console.log('Updating FormData:', Object.fromEntries(formData)); // Отладка
+
+    axios.post('/api/products', formData, {
       auth: { username: 'admin', password: 'admin123' },
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -111,7 +117,9 @@ const AdminPanel: React.FC = () => {
         setNewProduct({ name: '', description: '', price: '', quantity: '', category: '', photo: null });
         fetchProducts();
       })
-      .catch(error => console.error('Ошибка обновления товара:', error));
+      .catch(error => {
+        console.error('Ошибка обновления товара:', error.response?.data || error.message);
+      });
   };
 
   const handleDeleteProduct = (id: number) => {
@@ -120,7 +128,7 @@ const AdminPanel: React.FC = () => {
         auth: { username: 'admin', password: 'admin123' },
       })
         .then(() => {
-          fetchProducts(); // Обновляем список после удаления
+          fetchProducts();
         })
         .catch(error => console.error('Ошибка удаления товара:', error));
     }

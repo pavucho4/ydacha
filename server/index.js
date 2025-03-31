@@ -2,6 +2,8 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const pool = new Pool({
@@ -12,7 +14,14 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-// Статические файлы из client/build в корне проекта
+// Настройка multer для загрузки файлов
+const upload = multer({ dest: 'uploads/' });
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Статические файлы фронтенда
 app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
 
 // API маршруты
@@ -21,22 +30,23 @@ app.get('/api/products', async (req, res) => {
     const result = await pool.query('SELECT * FROM products');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('GET /api/products error:', err);
     res.status(500).json([]);
   }
 });
 
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', upload.single('photo'), async (req, res) => {
   const { name, description, price, quantity, category } = req.body;
+  const photo = req.file ? `/uploads/${req.file.filename}` : null;
   try {
     const result = await pool.query(
       'INSERT INTO products (name, description, price, quantity, category, photo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [name, description, price, quantity, category, null]
+      [name, description, parseFloat(price), parseInt(quantity), category, photo]
     );
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Ошибка добавления' });
+    console.error('POST /api/products error:', err);
+    res.status(500).json({ error: 'Ошибка добавления товара' });
   }
 });
 
@@ -46,7 +56,7 @@ app.delete('/api/products/:id', async (req, res) => {
     await pool.query('DELETE FROM products WHERE id = $1', [id]);
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    console.error('DELETE /api/products error:', err);
     res.status(500).json({ error: 'Ошибка удаления' });
   }
 });
@@ -77,12 +87,11 @@ app.post('/api/orders', async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('POST /api/orders error:', err);
     res.status(500).json({ error: 'Ошибка заказа' });
   }
 });
 
-// Обработка всех остальных маршрутов
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
 });
