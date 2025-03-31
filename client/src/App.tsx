@@ -32,11 +32,10 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Загрузка корзины с сервера
   useEffect(() => {
     fetch('/api/cart')
       .then(res => res.json())
-      .then(data => setCart(data))
+      .then(data => setCart(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching cart:', err));
   }, []);
 
@@ -60,6 +59,20 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Error adding to cart:', err);
+    }
+  };
+
+  const removeFromCart = async (id: number) => {
+    try {
+      const response = await fetch(`/api/cart/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        setCart(prev => prev.filter(item => item.id !== id));
+      }
+    } catch (err) {
+      console.error('Error removing from cart:', err);
     }
   };
 
@@ -205,7 +218,7 @@ const App: React.FC = () => {
               </>
             } />
             <Route path="/catalog" element={<ProductList addToCart={addToCart} cart={cart} clearCart={clearCart} />} />
-            <Route path="/order" element={<OrderForm cart={cart} clearCart={clearCart} />} />
+            <Route path="/order" element={<OrderForm cart={cart} clearCart={clearCart} removeFromCart={removeFromCart} />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/about" element={<About />} />
           </Routes>

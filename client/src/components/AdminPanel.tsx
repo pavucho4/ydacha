@@ -38,7 +38,10 @@ const AdminPanel: React.FC = () => {
     axios.get('/api/products', {
       auth: { username: 'admin', password: 'admin123' },
     })
-      .then(response => setProducts(response.data))
+      .then(response => {
+        const data = Array.isArray(response.data) ? response.data : [];
+        setProducts(data);
+      })
       .catch(error => console.error('Ошибка загрузки товаров:', error));
   };
 
@@ -70,6 +73,7 @@ const AdminPanel: React.FC = () => {
 
     axios.post('/api/products', formData, {
       auth: { username: 'admin', password: 'admin123' },
+      headers: { 'Content-Type': 'multipart/form-data' },
     })
       .then(() => {
         setNewProduct({ name: '', description: '', price: '', quantity: '', category: '', photo: null });
@@ -87,6 +91,7 @@ const AdminPanel: React.FC = () => {
     if (!editingProduct) return;
 
     const formData = new FormData();
+    formData.append('id', editingProduct.id.toString()); // Добавляем ID для идентификации
     formData.append('name', editingProduct.name);
     formData.append('description', editingProduct.description);
     formData.append('price', editingProduct.price.toString());
@@ -96,9 +101,10 @@ const AdminPanel: React.FC = () => {
       formData.append('photo', newProduct.photo);
     }
 
-    // Примечание: PUT не реализован в текущем app.py, используем POST для упрощённой замены
-    axios.post('/api/products', formData, {
+    // Примечание: Если сервер поддерживает PUT, замените на axios.put
+    axios.post(`/api/products`, formData, {
       auth: { username: 'admin', password: 'admin123' },
+      headers: { 'Content-Type': 'multipart/form-data' },
     })
       .then(() => {
         setEditingProduct(null);
@@ -109,8 +115,15 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteProduct = (id: number) => {
-    // Примечание: DELETE не реализован в текущем app.py, оставим как заглушку
-    console.log(`Удаление товара ${id} не реализовано на сервере`);
+    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+      axios.delete(`/api/products/${id}`, {
+        auth: { username: 'admin', password: 'admin123' },
+      })
+        .then(() => {
+          fetchProducts(); // Обновляем список после удаления
+        })
+        .catch(error => console.error('Ошибка удаления товара:', error));
+    }
   };
 
   if (!isAuthenticated) {
@@ -154,7 +167,7 @@ const AdminPanel: React.FC = () => {
           Выйти
         </button>
       </div>
-      
+
       <div className="bg-white p-6 rounded-lg shadow-md mb-12">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Добавить товар</h3>
         <form onSubmit={handleAddProduct} className="space-y-4">

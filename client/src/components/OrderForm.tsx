@@ -12,9 +12,10 @@ interface CartItem {
 interface OrderFormProps {
   cart: CartItem[];
   clearCart: () => void;
+  removeFromCart: (id: number) => void; // Новая функция для удаления
 }
 
-const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart }) => {
+const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }) => {
   const navigate = useNavigate();
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,7 +30,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart }) => {
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      if (date.getDay() !== 1) { // Исключаем понедельник
+      if (date.getDay() !== 1) {
         dates.push(date.toISOString().split('T')[0]);
       }
     }
@@ -97,8 +98,16 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart }) => {
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Ваша корзина:</h3>
           <ul className="space-y-2">
             {cart.map(item => (
-              <li key={item.id} className="text-gray-700">
-                {item.name} - {item.quantity} шт. ({item.price * item.quantity} руб.)
+              <li key={item.id} className="text-gray-700 flex justify-between items-center">
+                <span>
+                  {item.name} - {item.quantity} шт. ({item.price * item.quantity} руб.)
+                </span>
+                <button
+                  onClick={() => removeFromCart(item.id)}
+                  className="text-red-600 hover:text-red-800 font-semibold"
+                >
+                  Удалить
+                </button>
               </li>
             ))}
           </ul>
