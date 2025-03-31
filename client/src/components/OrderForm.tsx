@@ -62,19 +62,19 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, ''); // Удаляем всё, кроме цифр
+    let value = e.target.value.replace(/\D/g, '');
     if (value.length > 0 && !value.startsWith('7')) {
-      value = '7' + value; // Добавляем 7, если его нет
+      value = '7' + value;
     }
     if (value.length > 11) {
-      value = value.slice(0, 11); // Ограничиваем 11 цифрами
+      value = value.slice(0, 11);
     }
     setPhone('+' + value);
   };
 
   const validatePhone = () => {
-    const digits = phone.replace(/\D/g, ''); // Только цифры
-    return digits.length === 11; // +7 и 10 цифр
+    const digits = phone.replace(/\D/g, '');
+    return digits.length === 11;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

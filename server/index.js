@@ -49,18 +49,58 @@ app.get('/api/check-orders-table', async (req, res) => {
   }
 });
 
+// Маршрут для получения товаров
+app.get('/api/products', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const isAdmin = authHeader && authHeader === 'Basic ' + Buffer.from('admin:admin123').toString('base64');
+    
+    let query = 'SELECT * FROM products';
+    if (!isAdmin) {
+      query += ' WHERE quantity > 0'; // Для покупателей только товары в наличии
+    }
+    
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET /api/products error:', err.stack);
+    res.status(500).json({ error: 'Ошибка загрузки товаров', details: err.message });
+  }
+});
+
+// Маршрут для создания заказа
 app.post('/api/orders', async (req, res) => {
   const { customer_name, phone, items, desired_datetime } = req.body;
   console.log('Order data:', { customer_name, phone, items, desired_datetime });
 
   try {
-    // Сохраняем заказ в базе
+    // Проверка и обновление количества товаров
+    for (const item of items) {
+      const product = await pool.query(
+        'SELECT quantity FROM products WHERE id = $1',
+        [item.id]
+      );
+      if (product.rowCount === 0) {
+        throw new Error(`Товар с id ${item.id} не найден`);
+      }
+      const currentQuantity = product.rows[0].quantity;
+      const newQuantity = currentQuantity - item.qty;
+      if (newQuantity < 0) {
+        throw new Error(`Недостаточно товара ${item.id} (в наличии: ${currentQuantity}, заказано: ${item.qty})`);
+      }
+      await pool.query(
+        'UPDATE products SET quantity = $1 WHERE id = $2',
+        [newQuantity, item.id]
+      );
+    }
+
+    // Сохранение заказа
     const result = await pool.query(
       'INSERT INTO orders (customer_name, phone, items, desired_datetime) VALUES ($1, $2, $3, $4) RETURNING *',
       [customer_name, phone, JSON.stringify(items), desired_datetime]
     );
 
-    // Получаем названия товаров из таблицы products
+    // Получение названий товаров для Telegram
     const itemIds = items.map(item => item.id);
     const productsQuery = await pool.query(
       'SELECT id, name FROM products WHERE id = ANY($1)',
@@ -71,7 +111,6 @@ app.post('/api/orders', async (req, res) => {
       return acc;
     }, {});
 
-    // Формируем список товаров с названиями и количеством
     const itemsText = items
       .map(item => `${products[item.id] || 'Неизвестный товар'} - ${item.qty} шт.`)
       .join('\n');
@@ -96,17 +135,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Остальные маршруты остаются без изменений
-app.get('/api/products', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM products');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('GET /api/products error:', err.stack);
-    res.status(500).json({ error: 'Ошибка загрузки товаров', details: err.message });
-  }
-});
-
+// Добавление товара
 app.post('/api/products', upload.single('photo'), async (req, res) => {
   const { name, description, price, quantity, category } = req.body;
   const photo = req.file ? `/uploads/${req.file.filename}` : null;
@@ -122,6 +151,7 @@ app.post('/api/products', upload.single('photo'), async (req, res) => {
   }
 });
 
+// Обновление товара
 app.put('/api/products/:id', upload.single('photo'), async (req, res) => {
   const { id } = req.params;
   const { name, description, price, quantity, category } = req.body;
@@ -141,6 +171,7 @@ app.put('/api/products/:id', upload.single('photo'), async (req, res) => {
   }
 });
 
+// Удаление товара
 app.delete('/api/products/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -152,6 +183,7 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
+// Корзина
 let cart = [];
 app.get('/api/cart', (req, res) => res.json(cart));
 app.post('/api/cart', (req, res) => {

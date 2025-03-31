@@ -32,7 +32,7 @@ const ProductList: React.FC<ProductListProps> = ({ addToCart, cart, clearCart, i
   const searchQuery = new URLSearchParams(location.search).get('search') || '';
 
   useEffect(() => {
-    axios.get('/api/products')
+    axios.get('/api/products') // Без авторизации, только quantity > 0
       .then(response => {
         const data = Array.isArray(response.data) ? response.data : [];
         let filteredProducts = data;
@@ -92,6 +92,7 @@ const ProductList: React.FC<ProductListProps> = ({ addToCart, cart, clearCart, i
                   <button
                     onClick={() => addToCart(product)}
                     className="mt-4 w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm"
+                    disabled={product.quantity === 0} // Отключаем кнопку, если товара нет
                   >
                     В корзину
                   </button>
@@ -127,6 +128,7 @@ const ProductList: React.FC<ProductListProps> = ({ addToCart, cart, clearCart, i
                         <button
                           onClick={() => addToCart(product)}
                           className="mt-4 w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 text-sm"
+                          disabled={product.quantity === 0} // Отключаем кнопку, если товара нет
                         >
                           В корзину
                         </button>
