@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node server/index.js",
-    "build": "cd client && npm ci && npm run build && ls -la client/build",
+    "build": "cd client && npm ci && npm run build",
     "postinstall": "cd client && npm ci && npm run build"
   },
   "dependencies": {
