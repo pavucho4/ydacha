@@ -3,15 +3,12 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node server/index.js",
-    "build": "npm ci && cd client && npm ci && npm run build",
-    "postinstall": "npm ci && cd client && npm ci && npm run build"
+    "build": "cd client && npm ci && npm run build",
+    "postinstall": "cd client && npm ci && npm run build"
   },
   "dependencies": {
     "express": "^4.18.2",
     "pg": "^8.11.3",
     "cors": "^2.8.5"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
