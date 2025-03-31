@@ -12,7 +12,7 @@ interface CartItem {
 interface OrderFormProps {
   cart: CartItem[];
   clearCart: () => void;
-  removeFromCart: (id: number) => void; // Новая функция для удаления
+  removeFromCart: (id: number) => void;
 }
 
 const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }) => {
@@ -61,6 +61,22 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }
     return selectedDateTime >= minTimeDate && selectedDateTime <= maxTime;
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ''); // Удаляем всё, кроме цифр
+    if (value.length > 0 && !value.startsWith('7')) {
+      value = '7' + value; // Добавляем 7, если его нет
+    }
+    if (value.length > 11) {
+      value = value.slice(0, 11); // Ограничиваем 11 цифрами
+    }
+    setPhone('+' + value);
+  };
+
+  const validatePhone = () => {
+    const digits = phone.replace(/\D/g, ''); // Только цифры
+    return digits.length === 11; // +7 и 10 цифр
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) {
@@ -71,6 +87,10 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }
       setError('Выберите дату и время с 9:00 до 15:30, минимум через 30 минут');
       return;
     }
+    if (!validatePhone()) {
+      setError('Номер телефона должен содержать 11 цифр (например, +79991234567)');
+      return;
+    }
 
     const orderData = {
       customer_name: customerName,
@@ -79,13 +99,17 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }
       desired_datetime: `${desiredDate} ${desiredTime}:00`,
     };
 
+    console.log('Sending order:', orderData);
+
     axios.post('/api/orders', orderData)
-      .then(() => {
+      .then(response => {
+        console.log('Order submitted:', response.data);
         alert('Заказ успешно отправлен!');
         clearCart();
         navigate('/');
       })
       .catch(error => {
+        console.error('Order submission error:', error.response?.data || error.message);
         setError(error.response?.data?.error || 'Ошибка при отправке заказа');
       });
   };
@@ -135,7 +159,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ cart, clearCart, removeFromCart }
           <input
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={handlePhoneChange}
             className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
             placeholder="+79991234567"
             required
