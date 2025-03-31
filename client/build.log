@@ -1,0 +1,19 @@
+
+> frontend@0.1.0 build
+> react-scripts build
+
+Creating an optimized production build...
+Failed to compile.
+
+TS2786: 'TypedFaHome' cannot be used as a JSX component.
+  Its return type 'ReactNode' is not a valid JSX element.
+    Type 'undefined' is not assignable to type 'Element | null'.
+  [0m [90m 64 |[39m             [33m<[39m[33mnav[39m className[33m=[39m[32m"flex items-center space-x-6"[39m[33m>[39m
+   [90m 65 |[39m               [33m<[39m[33mLink[39m to[33m=[39m[32m"/"[39m className[33m=[39m[32m"text-gray-600 hover:text-green-600 flex items-center"[39m[33m>[39m
+  [31m[1m>[22m[39m[90m 66 |[39m                 [33m<[39m[33mTypedFaHome[39m className[33m=[39m[32m"mr-1"[39m [33m/[39m[33m>[39m [33mГлавная[39m
+   [90m    |[39m                  [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 67 |[39m               [33m<[39m[33m/[39m[33mLink[39m[33m>[39m
+   [90m 68 |[39m               [33m<[39m[33mLink[39m to[33m=[39m[32m"/catalog"[39m className[33m=[39m[32m"text-gray-600 hover:text-green-600 flex items-center"[39m[33m>[39m
+   [90m 69 |[39m                 [33m<[39m[33mTypedFaShoppingCart[39m className[33m=[39m[32m"mr-1"[39m [33m/[39m[33m>[39m [33mКаталог[39m[0m
+
+
