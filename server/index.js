@@ -12,8 +12,8 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-// Статические файлы фронтенда из client/build
-app.use(express.static(path.join(__dirname, 'client', 'build')));
+// Статические файлы из client/build в корне проекта
+app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
 
 // API маршруты
 app.get('/api/products', async (req, res) => {
@@ -51,8 +51,9 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
+let cart = [];
 app.get('/api/cart', (req, res) => {
-  res.json(cart); // cart должен быть определён или заменён на запрос к БД
+  res.json(cart);
 });
 
 app.post('/api/cart', (req, res) => {
@@ -81,13 +82,10 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Обработка всех остальных маршрутов — отдаём index.html для React Router
+// Обработка всех остальных маршрутов
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// Временное хранилище корзины (замените на БД при необходимости)
-let cart = [];
