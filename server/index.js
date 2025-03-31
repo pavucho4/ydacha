@@ -77,8 +77,8 @@ app.post('/api/orders', async (req, res) => {
       .join('\n');
 
     // Отправка в Telegram
-    const telegramToken = 'YOUR_TELEGRAM_BOT_TOKEN'; // Замените на ваш токен
-    const chatId = 'YOUR_CHAT_ID'; // Замените на ваш chat_id
+    const telegramToken = '7905338411:AAFI1v_5NXSS-qCOwbiei4tKs28_pLHt0pc'; // Замените на ваш токен
+    const chatId = '709914926'; // Замените на ваш chat_id
     const message = `Новый заказ:\nИмя: ${customer_name}\nТелефон: ${phone}\nТовары:\n${itemsText}\nДата: ${desired_datetime}`;
     await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
       method: 'POST',
