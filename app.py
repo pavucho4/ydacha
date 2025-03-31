@@ -6,26 +6,22 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import asyncio
 from telegram import Bot
-from datetime import datetime, timedelta
+from datetime import datetime
 
 app = Flask(__name__, static_folder='frontend/static', template_folder='frontend')
 CORS(app)
 
-# Конфигурация
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['TELEGRAM_BOT_TOKEN'] = os.getenv('TELEGRAM_BOT_TOKEN')
 app.config['TELEGRAM_CHAT_ID'] = os.getenv('TELEGRAM_CHAT_ID')
 
-# Telegram-бот
 bot = Bot(token=app.config['TELEGRAM_BOT_TOKEN'])
 loop = asyncio.get_event_loop()
 
-# JSON-файлы
 PRODUCTS_FILE = 'products.json'
 ORDERS_FILE = 'orders.json'
 USERS_FILE = 'users.json'
 
-# Инициализация данных
 if not os.path.exists(PRODUCTS_FILE):
     with open(PRODUCTS_FILE, 'w') as f:
         json.dump([], f)
@@ -96,30 +92,14 @@ def add_product():
 @app.route('/api/orders', methods=['POST'])
 def create_order():
     data = request.json
-    required_fields = ['customer_name', 'phone', 'items', 'delivery_method', 'desired_datetime']
+    required_fields = ['customer_name', 'phone', 'items', 'desired_datetime']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Отсутствуют обязательные поля'}), 400
-
-    delivery_method = data['delivery_method']
-    if delivery_method not in ['pickup', 'delivery']:
-        return jsonify({'error': 'Неверный способ получения'}), 400
-    
-    if delivery_method == 'delivery' and 'address' not in data:
-        return jsonify({'error': 'Укажите адрес'}), 400
 
     try:
         desired_dt = datetime.strptime(data['desired_datetime'], '%Y-%m-%d %H:%M:%S')
     except ValueError:
         return jsonify({'error': 'Неверный формат даты'}), 400
-
-    now = datetime.now()
-    min_delivery_time = now + timedelta(minutes=30)
-
-    if delivery_method == 'delivery':
-        if not data['address'].lower().startswith('г. михайловск'):
-            return jsonify({'error': 'Доставка только по г. Михайловску'}), 400
-        if desired_dt < min_delivery_time:
-            return jsonify({'error': f'Доставка не раньше {min_delivery_time}'}), 400
 
     with open(PRODUCTS_FILE, 'r') as f:
         products = json.load(f)
@@ -129,13 +109,10 @@ def create_order():
         f"Новый заказ:\n"
         f"Имя: {data['customer_name']}\n"
         f"Телефон: {data['phone']}\n"
-        f"Способ: {'Самовывоз' if delivery_method == 'pickup' else 'Доставка'}\n"
+        f"Способ: Самовывоз\n"
         f"Время: {desired_dt.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"Товары:\n"
     )
-    if delivery_method == 'delivery':
-        order_text += f"Адрес: {data['address']}\n"
-    
-    order_text += "Товары:\n"
     for item in items:
         product = next((p for p in products if p['id'] == item['id']), None)
         if not product or product['quantity'] < item['qty']:
@@ -156,7 +133,6 @@ def create_order():
     send_order_to_bot(order_text)
     return jsonify({'message': 'Заказ отправлен'}), 201
 
-# Обслуживание React
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):
