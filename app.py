@@ -92,17 +92,20 @@ def add_product():
     
     return jsonify({'message': 'Товар добавлен', 'id': product_id}), 201
 
+# Обслуживание React
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):
-    if path.startswith('api') or path.startswith('static'):
+    # API и static обрабатываются отдельно
+    if path.startswith('api'):
         return jsonify({'error': 'Not found'}), 404
-    if os.path.exists(os.path.join(app.template_folder, path)):
-        return send_from_directory(app.template_folder, path)
+    if path.startswith('static'):
+        return app.send_static_file(path)
+    # Для всех остальных путей возвращаем index.html
     return send_from_directory(app.template_folder, 'index.html')
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
-    port = int(os.getenv('PORT', 10000))  # Render использует PORT
+    port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
