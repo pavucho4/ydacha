@@ -11,9 +11,11 @@ const pool = new Pool({
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Для фото товаров
 
-// Продукты
+// Статические файлы фронтенда из client/build
+app.use(express.static(path.join(__dirname, 'client', 'build')));
+
+// API маршруты
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products');
@@ -29,7 +31,7 @@ app.post('/api/products', async (req, res) => {
   try {
     const result = await pool.query(
       'INSERT INTO products (name, description, price, quantity, category, photo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [name, description, price, quantity, category, null] // Фото пока не обрабатываем
+      [name, description, price, quantity, category, null]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -49,10 +51,8 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
-// Корзина (упрощённая реализация)
-let cart = []; // Временное хранилище, замените на базу данных
 app.get('/api/cart', (req, res) => {
-  res.json(cart);
+  res.json(cart); // cart должен быть определён или заменён на запрос к БД
 });
 
 app.post('/api/cart', (req, res) => {
@@ -67,7 +67,6 @@ app.delete('/api/cart/:id', (req, res) => {
   res.status(204).send();
 });
 
-// Заказы
 app.post('/api/orders', async (req, res) => {
   const { customer_name, phone, items, desired_datetime } = req.body;
   try {
@@ -82,5 +81,13 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// Обработка всех остальных маршрутов — отдаём index.html для React Router
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Временное хранилище корзины (замените на БД при необходимости)
+let cart = [];
