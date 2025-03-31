@@ -22,45 +22,44 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
 
-// Временный маршрут для проверки базы данных
-app.get('/api/db-check', async (req, res) => {
+// Временный маршрут для проверки и исправления структуры базы
+app.get('/api/fix-db-structure', async (req, res) => {
   try {
-    // Проверка подключения
-    const connectionTest = await pool.query('SELECT NOW()');
-    console.log('DB connection test:', connectionTest.rows[0]);
-
-    // Проверка структуры таблицы products
+    // Проверка текущей структуры таблицы
     const structure = await pool.query(
       "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products'"
     );
-    const columns = structure.rows;
+    const columns = structure.rows.map(row => row.column_name);
+    console.log('Current columns:', columns);
 
-    // Добавление столбца description, если его нет
-    const hasDescription = columns.some(col => col.column_name === 'description');
-    if (!hasDescription) {
-      await pool.query('ALTER TABLE products ADD COLUMN description TEXT');
-      console.log('Added description column');
-      const updatedStructure = await pool.query(
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products'"
-      );
-      res.json({
-        status: 'DB OK',
-        connection: connectionTest.rows[0],
-        columns: updatedStructure.rows,
-      });
-    } else {
-      res.json({
-        status: 'DB OK',
-        connection: connectionTest.rows[0],
-        columns,
-      });
+    // Переименование image в photo, если image существует
+    if (columns.includes('image') && !columns.includes('photo')) {
+      await pool.query('ALTER TABLE products RENAME COLUMN image TO photo');
+      console.log('Renamed column image to photo');
     }
+
+    // Добавление category, если его нет
+    if (!columns.includes('category')) {
+      await pool.query('ALTER TABLE products ADD COLUMN category VARCHAR(255) NOT NULL DEFAULT \'Unknown\'');
+      console.log('Added column category');
+    }
+
+    // Проверка обновлённой структуры
+    const updatedStructure = await pool.query(
+      "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products'"
+    );
+    res.json({
+      status: 'DB structure fixed',
+      oldColumns: columns,
+      newColumns: updatedStructure.rows,
+    });
   } catch (err) {
-    console.error('DB check error:', err.stack);
-    res.status(500).json({ error: 'DB check failed', details: err.message });
+    console.error('DB fix error:', err.stack);
+    res.status(500).json({ error: 'DB fix failed', details: err.message });
   }
 });
 
+// Остальные маршруты
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products');
