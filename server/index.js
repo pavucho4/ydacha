@@ -22,44 +22,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
 
-// Временный маршрут для проверки и исправления структуры базы
-app.get('/api/fix-db-structure', async (req, res) => {
-  try {
-    // Проверка текущей структуры таблицы
-    const structure = await pool.query(
-      "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products'"
-    );
-    const columns = structure.rows.map(row => row.column_name);
-    console.log('Current columns:', columns);
-
-    // Переименование image в photo, если image существует
-    if (columns.includes('image') && !columns.includes('photo')) {
-      await pool.query('ALTER TABLE products RENAME COLUMN image TO photo');
-      console.log('Renamed column image to photo');
-    }
-
-    // Добавление category, если его нет
-    if (!columns.includes('category')) {
-      await pool.query('ALTER TABLE products ADD COLUMN category VARCHAR(255) NOT NULL DEFAULT \'Unknown\'');
-      console.log('Added column category');
-    }
-
-    // Проверка обновлённой структуры
-    const updatedStructure = await pool.query(
-      "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products'"
-    );
-    res.json({
-      status: 'DB structure fixed',
-      oldColumns: columns,
-      newColumns: updatedStructure.rows,
-    });
-  } catch (err) {
-    console.error('DB fix error:', err.stack);
-    res.status(500).json({ error: 'DB fix failed', details: err.message });
-  }
-});
-
-// Остальные маршруты
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products');
@@ -85,6 +47,29 @@ app.post('/api/products', upload.single('photo'), async (req, res) => {
   } catch (err) {
     console.error('POST /api/products error:', err.stack);
     res.status(500).json({ error: 'Ошибка добавления товара', details: err.message });
+  }
+});
+
+// Новый маршрут для редактирования товара
+app.put('/api/products/:id', upload.single('photo'), async (req, res) => {
+  const { id } = req.params;
+  const { name, description, price, quantity, category } = req.body;
+  const photo = req.file ? `/uploads/${req.file.filename}` : null;
+
+  console.log('Updating product:', { id, name, description, price, quantity, category, photo });
+
+  try {
+    const result = await pool.query(
+      'UPDATE products SET name = $1, description = $2, price = $3, quantity = $4, category = $5, photo = COALESCE($6, photo) WHERE id = $7 RETURNING *',
+      [name, description, parseFloat(price), parseInt(quantity), category, photo, id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Товар не найден' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('PUT /api/products error:', err.stack);
+    res.status(500).json({ error: 'Ошибка обновления товара', details: err.message });
   }
 });
 

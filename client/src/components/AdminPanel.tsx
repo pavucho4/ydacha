@@ -94,9 +94,8 @@ const AdminPanel: React.FC = () => {
   const handleUpdateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
-
+  
     const formData = new FormData();
-    formData.append('id', editingProduct.id.toString());
     formData.append('name', editingProduct.name);
     formData.append('description', editingProduct.description);
     formData.append('price', editingProduct.price.toString());
@@ -105,10 +104,10 @@ const AdminPanel: React.FC = () => {
     if (newProduct.photo) {
       formData.append('photo', newProduct.photo);
     }
-
+  
     console.log('Updating FormData:', Object.fromEntries(formData)); // Отладка
-
-    axios.post('/api/products', formData, {
+  
+    axios.put(`/api/products/${editingProduct.id}`, formData, {
       auth: { username: 'admin', password: 'admin123' },
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -120,7 +119,7 @@ const AdminPanel: React.FC = () => {
       .catch(error => {
         console.error('Ошибка обновления товара:', error.response?.data || error.message);
       });
-  };
+  }
 
   const handleDeleteProduct = (id: number) => {
     if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
